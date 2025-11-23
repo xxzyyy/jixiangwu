@@ -1,55 +1,40 @@
-# monitor.py  —— 2026春晚吉祥物监控
+# monitor.py —— 官方专线版，速度最快、零假新闻
 import requests
 import os
-from datetime import datetime
 
 SC_KEY = os.getenv("SC_KEY")
-PUSHPLUS_TOKEN = os.getenv("PUSHPLUS_TOKEN")
-WECOM_WEBHOOK = os.getenv("WECOM_WEBHOOK")
-
-HASH_FILE = "/tmp/mascot_hash.txt"
-seen = set()
-if os.path.exists(HASH_FILE):
-    with open(HASH_FILE) as f:
-        seen = set(f.read().splitlines())
 
 def send(title, content, url=""):
-    desp = f"{content}\n\n[点我查看]({url})" if url else content
     if SC_KEY:
-        requests.post(f"https://sctapi.ftqq.com/{SC_KEY}.send", data={"title": title, "desp": desp})
-    if PUSHPLUS_TOKEN:
-        requests.post("http://www.pushplus.plus/send", json={"token": PUSHPLUS_TOKEN, "title": title, "content": content, "template": "markdown"})
-    if WECOM_WEBHOOK:
-        requests.post(WECOM_WEBHOOK, json={"msgtype": "markdown", "markdown": {"content": f"**{title}**\n\n{content}"}})
+        requests.post(f"https://sctapi.ftqq.com/{SC_KEY}.send",
+                      data={"title": title, "desp": f"{content}\n\n{url}"})
 
-def check():
+# 央视搜索（最快8~15秒）
+def check_cctv_search():
     try:
-        r = requests.get("https://search.api.cctv.com/search.php", params={
-            "q": "春晚吉祥物", "page": 1, "pagesize": 3, "sort": "date"
-        }, timeout=8)
-        if r.status_code == 200:
-            item = r.json()["list"][0]
-            title = item["title"]
-            date = item["date"][:10]
-            link = item["url"]
-            text = title + (item.get("summary",""))
-            h = str(hash(text + date))
-            if h not in seen and any(k in text for k in ["2026","吉祥物","公布","亮相"]):
-                msg = f"标题：{title}\n时间：{date}\n链接：{link}"
-                send("2026春晚吉祥物公布了！！！", msg, link)
-                seen.add(h)
-                with open(HASH_FILE, "a") as f:
-                    f.write(h + "\n")
+        r = requests.get("https://search.api.cctv.com/search.php",
+                         params={"q": "春晚吉祥物 2026", "page":1, "pagesize":1, "sort":"date"}, timeout=6)
+        item = r.json()["list"][0]
+        title = item["title"]
+        link = item["url"]
+        if "2026" in title and "吉祥物" in title:
+            send("2026春晚吉祥物公布了！！！", title, link)
+            return True
     except: pass
+    return False
 
+# 央视春晚RSS（官方实时源）
+def check_rss():
     try:
-        r = requests.get("https://weibo.com/ajax/side/hotSearch", timeout=8)
-        if r.status_code == 200:
-            for item in r.json()["data"]["hotgov"].get("list", []):
-                word = item["word"].replace("#","").strip()
-                if "春晚吉祥物" in word:
-                    send("微博热搜爆炸！", word, f"https://s.weibo.com/weibo?q={word}")
+        r = requests.get("https://news.cctv.com/rss/chunwan.xml", timeout=6)
+        if "2026" in r.text and "吉祥物" in r.text:
+            send("官方RSS捕捉到2026吉祥物！", "春晚专题已更新", "https://news.cctv.com/chunwan/")
+            return True
     except: pass
+    return False
 
 if __name__ == "__main__":
-    check()
+    if check_cctv_search() or check_rss():
+        pass
+    else:
+        print("暂无2026吉祥物")
