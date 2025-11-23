@@ -1,10 +1,8 @@
 name: 春晚吉祥物监控
-
 on:
   schedule:
-    - cron: '*/2 * * * *'   # 每2分钟检查一次
+    - cron: '*/2 * * * *'   # 每2分钟自动运行一次
   workflow_dispatch:
-
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -13,6 +11,8 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+      - name: 安装依赖
+        run: pip install requests
       - name: 运行监控
         env:
           SC_KEY: ${{ secrets.SC_KEY }}
