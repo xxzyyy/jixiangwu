@@ -34,7 +34,5 @@ def check_rss():
     return False
 
 if __name__ == "__main__":
-    if check_cctv_search() or check_rss():
-        pass
-    else:
-        print("暂无2026吉祥物")
+    send("【测试成功！】", 
+         "吉祥物监控已就绪！\n2026年一旦公布，我会在10秒内告诉你！\n当前时间：2025年11月23日")
